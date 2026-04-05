@@ -24,6 +24,7 @@ import com.linkedin.metadata.graph.SiblingGraphService;
 import com.linkedin.metadata.models.registry.EntityRegistry;
 import com.linkedin.metadata.recommendation.RecommendationsService;
 import com.linkedin.metadata.search.SemanticSearchService;
+import com.linkedin.metadata.search.semantic.SemanticEntitySearch;
 import com.linkedin.metadata.service.ApplicationService;
 import com.linkedin.metadata.service.AssertionService;
 import com.linkedin.metadata.service.BusinessAttributeService;
@@ -109,5 +110,8 @@ public class GmsGraphQLEngineArgs {
   S3Util s3Util;
   SemanticSearchService semanticSearchService;
   SemanticSearchConfiguration semanticSearchConfiguration;
+
+  /** Optional. Non-null when {@code searchService.semanticSearchEnabled=true}. */
+  SemanticEntitySearch semanticEntitySearch;
   // any fork specific args should go below this line
 }

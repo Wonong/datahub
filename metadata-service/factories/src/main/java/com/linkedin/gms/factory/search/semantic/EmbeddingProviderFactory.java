@@ -6,7 +6,7 @@ import com.linkedin.metadata.config.search.SemanticSearchConfiguration;
 import com.linkedin.metadata.search.embedding.AwsBedrockEmbeddingProvider;
 import com.linkedin.metadata.search.embedding.CohereEmbeddingProvider;
 import com.linkedin.metadata.search.embedding.EmbeddingProvider;
-import com.linkedin.metadata.search.embedding.HuggingFaceEmbeddingProvider;
+import com.linkedin.metadata.search.embedding.HttpEmbeddingProvider;
 import com.linkedin.metadata.search.embedding.NoOpEmbeddingProvider;
 import com.linkedin.metadata.search.embedding.OpenAIEmbeddingProvider;
 import javax.annotation.Nonnull;
@@ -74,10 +74,10 @@ public class EmbeddingProviderFactory {
       case "aws-bedrock" -> createAwsBedrockProvider(config);
       case "openai" -> createOpenAIProvider(config);
       case "cohere" -> createCohereProvider(config);
-      case "huggingface" -> createHuggingFaceProvider(config);
+      case "local-http" -> createLocalHttpProvider(config);
       default -> throw new IllegalStateException(
           String.format(
-              "Unsupported embedding provider type: %s. Supported types: aws-bedrock, openai, cohere, huggingface",
+              "Unsupported embedding provider type: %s. Supported types: local-http, aws-bedrock, openai, cohere",
               providerType));
     };
   }
@@ -131,24 +131,14 @@ public class EmbeddingProviderFactory {
         cohereConfig.getApiKey(), cohereConfig.getEndpoint(), cohereConfig.getModel());
   }
 
-  private EmbeddingProvider createHuggingFaceProvider(EmbeddingProviderConfiguration config) {
-    EmbeddingProviderConfiguration.HuggingFaceConfig hfConfig = config.getHuggingface();
-
-    if (hfConfig.getApiKey() == null || hfConfig.getApiKey().isBlank()) {
-      log.warn(
-          "HuggingFace API key is not set. Proceeding without authentication — "
-              + "this works for self-hosted servers but will fail against the managed Inference API. "
-              + "Set HF_TOKEN or configure embeddingProvider.huggingface.apiKey in application.yaml");
-    }
+  private EmbeddingProvider createLocalHttpProvider(EmbeddingProviderConfiguration config) {
+    EmbeddingProviderConfiguration.HttpConfig httpConfig = config.getLocalHttp();
 
     log.info(
-        "Configuring HuggingFace embedding provider: baseUrl={}, model={}",
-        hfConfig.getBaseUrl(),
-        hfConfig.getModel());
+        "Configuring local HTTP embedding provider: baseUrl={}, timeoutSeconds={}",
+        httpConfig.getBaseUrl(),
+        httpConfig.getTimeoutSeconds());
 
-    return new HuggingFaceEmbeddingProvider(
-        hfConfig.getApiKey() != null ? hfConfig.getApiKey() : "",
-        hfConfig.getBaseUrl(),
-        hfConfig.getModel());
+    return new HttpEmbeddingProvider(httpConfig.getBaseUrl(), httpConfig.getTimeoutSeconds());
   }
 }

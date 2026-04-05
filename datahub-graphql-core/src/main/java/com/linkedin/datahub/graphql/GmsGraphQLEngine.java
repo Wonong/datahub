@@ -346,6 +346,7 @@ import com.linkedin.metadata.models.registry.EntityRegistry;
 import com.linkedin.metadata.query.filter.SortCriterion;
 import com.linkedin.metadata.query.filter.SortOrder;
 import com.linkedin.metadata.recommendation.RecommendationsService;
+import com.linkedin.metadata.search.semantic.SemanticEntitySearch;
 import com.linkedin.metadata.service.ApplicationService;
 import com.linkedin.metadata.service.AssertionService;
 import com.linkedin.metadata.service.BusinessAttributeService;
@@ -387,6 +388,7 @@ import java.util.Optional;
 import java.util.function.Function;
 import java.util.function.Supplier;
 import java.util.stream.Collectors;
+import javax.annotation.Nullable;
 import lombok.Getter;
 import lombok.extern.slf4j.Slf4j;
 import org.apache.commons.io.IOUtils;
@@ -459,6 +461,7 @@ public class GmsGraphQLEngine {
   private final HomePageConfiguration homePageConfiguration;
   private final ChromeExtensionConfiguration chromeExtensionConfiguration;
   private final SemanticSearchConfiguration semanticSearchConfiguration;
+  @Nullable private final SemanticEntitySearch semanticEntitySearch;
 
   private final DatasetType datasetType;
 
@@ -603,6 +606,7 @@ public class GmsGraphQLEngine {
     this.featureFlags = args.featureFlags;
     this.chromeExtensionConfiguration = args.chromeExtensionConfiguration;
     this.semanticSearchConfiguration = args.semanticSearchConfiguration;
+    this.semanticEntitySearch = args.semanticEntitySearch;
 
     this.datasetType = new DatasetType(entityClient);
     this.roleType = new RoleType(entityClient);
@@ -1040,7 +1044,12 @@ public class GmsGraphQLEngine {
                 .dataFetcher("search", new SearchResolver(this.entityClient))
                 .dataFetcher(
                     "searchAcrossEntities",
-                    new SearchAcrossEntitiesResolver(this.entityClient, this.viewService))
+                    new SearchAcrossEntitiesResolver(
+                        this.entityClient,
+                        this.viewService,
+                        this.semanticEntitySearch,
+                        this.semanticSearchConfiguration != null
+                            && this.semanticSearchConfiguration.isEnabled()))
                 .dataFetcher(
                     "scrollAcrossEntities",
                     new ScrollAcrossEntitiesResolver(this.entityClient, this.viewService))
