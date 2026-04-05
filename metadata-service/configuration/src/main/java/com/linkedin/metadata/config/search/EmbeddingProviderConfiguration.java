@@ -13,7 +13,7 @@ import lombok.NoArgsConstructor;
  *   <li><b>aws-bedrock</b>: AWS Bedrock Runtime API with Cohere/Titan models
  *   <li><b>openai</b>: OpenAI Embeddings API with text-embedding-3-small/large/ada-002 models
  *   <li><b>cohere</b>: Cohere Embed API with embed-english-v3.0/multilingual-v3.0 models
- *   <li><b>huggingface</b>: HuggingFace Inference API (supports dragonkue/kure-v1 and others)
+ *   <li><b>huggingface</b>: HuggingFace Inference API (supports nlpai-lab/KURE-v1 and others)
  * </ul>
  */
 @Data
@@ -161,11 +161,11 @@ public class EmbeddingProviderConfiguration {
     private String apiKey;
 
     /**
-     * HuggingFace model identifier. Defaults to "dragonkue/kure-v1" (768 dimensions, Korean
+     * HuggingFace model identifier. Defaults to "nlpai-lab/KURE-v1" (768 dimensions, Korean
      * semantic embedding model). Any model that supports the feature-extraction pipeline can be
      * used.
      */
-    private String model = "dragonkue/kure-v1";
+    private String model = "nlpai-lab/KURE-v1";
 
     /**
      * Base URL of the inference server. Defaults to "https://api-inference.huggingface.co". For

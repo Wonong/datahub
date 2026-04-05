@@ -27,7 +27,7 @@ public class HuggingFaceEmbeddingProviderTest {
         new HuggingFaceEmbeddingProvider(
             "hf_test_token",
             "https://api-inference.huggingface.co",
-            "dragonkue/kure-v1",
+            "nlpai-lab/KURE-v1",
             mockHttpClient);
   }
 
@@ -118,7 +118,7 @@ public class HuggingFaceEmbeddingProviderTest {
   public void testEmbedWith503ModelLoadingExhaustsRetries() throws Exception {
     // 503 means the model is still loading — retried, but eventually fails
     String errorJson =
-        "{\"error\": \"Model dragonkue/kure-v1 is currently loading\", \"estimated_time\": 20}";
+        "{\"error\": \"Model nlpai-lab/KURE-v1 is currently loading\", \"estimated_time\": 20}";
 
     when(mockResponse.statusCode()).thenReturn(503);
     when(mockResponse.body()).thenReturn(errorJson);
@@ -220,7 +220,7 @@ public class HuggingFaceEmbeddingProviderTest {
   @Test
   public void testConstructorWithAllParameters() {
     HuggingFaceEmbeddingProvider p =
-        new HuggingFaceEmbeddingProvider("hf_test", "http://localhost:8080", "dragonkue/kure-v1");
+        new HuggingFaceEmbeddingProvider("hf_test", "http://localhost:8080", "nlpai-lab/KURE-v1");
     assertNotNull(p);
   }
 
@@ -229,7 +229,7 @@ public class HuggingFaceEmbeddingProviderTest {
     // Self-hosted TEI servers do not require authentication
     HuggingFaceEmbeddingProvider unauthProvider =
         new HuggingFaceEmbeddingProvider(
-            "", "http://localhost:8080", "dragonkue/kure-v1", mockHttpClient);
+            "", "http://localhost:8080", "nlpai-lab/KURE-v1", mockHttpClient);
 
     String responseJson = "[[0.1, 0.2]]";
     when(mockResponse.statusCode()).thenReturn(200);

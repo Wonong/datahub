@@ -24,7 +24,7 @@ import lombok.extern.slf4j.Slf4j;
  * <p>The response format is {@code [[float, ...]]} — a 2D array where the first element contains
  * the sentence-level embedding vector (mean pooling over token embeddings).
  *
- * <p>Primary use case is the {@code dragonkue/kure-v1} model (768 dimensions), a Korean-language
+ * <p>Primary use case is the {@code nlpai-lab/KURE-v1} model (768 dimensions), a Korean-language
  * semantic embedding model. Self-hosted endpoints (e.g., Text Embeddings Inference) are also
  * supported via the {@code endpoint} parameter.
  *
@@ -37,7 +37,7 @@ import lombok.extern.slf4j.Slf4j;
 @Slf4j
 public class HuggingFaceEmbeddingProvider implements EmbeddingProvider {
 
-  private static final String DEFAULT_MODEL = "dragonkue/kure-v1";
+  private static final String DEFAULT_MODEL = "nlpai-lab/KURE-v1";
   private static final String DEFAULT_BASE_URL = "https://api-inference.huggingface.co";
   private static final String FEATURE_EXTRACTION_PATH = "/pipeline/feature-extraction/";
   private static final Duration DEFAULT_TIMEOUT = Duration.ofSeconds(60);
@@ -66,7 +66,7 @@ public class HuggingFaceEmbeddingProvider implements EmbeddingProvider {
    *
    * @param apiKey HuggingFace access token or empty string for unauthenticated self-hosted servers
    * @param baseUrl Base URL of the inference server (no trailing slash)
-   * @param defaultModel Default model identifier (e.g., "dragonkue/kure-v1")
+   * @param defaultModel Default model identifier (e.g., "nlpai-lab/KURE-v1")
    */
   public HuggingFaceEmbeddingProvider(
       @Nonnull String apiKey, @Nonnull String baseUrl, @Nonnull String defaultModel) {

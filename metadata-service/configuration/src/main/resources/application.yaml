@@ -456,10 +456,10 @@ elasticsearch:
           endpoint: ${COHERE_EMBEDDING_ENDPOINT:https://api.cohere.ai/v1/embed}
 
         # HuggingFace configuration (used when type is "huggingface")
-        # Default model: dragonkue/kure-v1 (768 dimensions, Korean semantic embedding)
+        # Default model: nlpai-lab/KURE-v1 (768 dimensions, Korean semantic embedding)
         huggingface:
           apiKey: ${HF_TOKEN:}
-          model: ${HF_EMBEDDING_MODEL:dragonkue/kure-v1}
+          model: ${HF_EMBEDDING_MODEL:nlpai-lab/KURE-v1}
           baseUrl: ${HF_EMBEDDING_BASE_URL:https://api-inference.huggingface.co}
   # Multi-client shim configuration
   shim:
