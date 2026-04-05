@@ -22,22 +22,26 @@ import com.linkedin.metadata.query.filter.ConjunctiveCriterionArray;
 import com.linkedin.metadata.query.filter.CriterionArray;
 import com.linkedin.metadata.query.filter.Filter;
 import com.linkedin.metadata.query.filter.SortCriterion;
+import com.linkedin.metadata.search.SearchEntity;
+import com.linkedin.metadata.search.SearchEntityArray;
 import com.linkedin.metadata.search.SearchResult;
+import com.linkedin.metadata.search.semantic.SemanticEntitySearch;
 import com.linkedin.metadata.service.ViewService;
 import com.linkedin.metadata.utils.CriterionUtils;
 import com.linkedin.view.DataHubViewInfo;
 import graphql.schema.DataFetcher;
 import graphql.schema.DataFetchingEnvironment;
 import java.util.Collections;
+import java.util.LinkedHashMap;
 import java.util.List;
+import java.util.Map;
 import java.util.concurrent.CompletableFuture;
 import java.util.stream.Collectors;
-import lombok.RequiredArgsConstructor;
+import javax.annotation.Nullable;
 import lombok.extern.slf4j.Slf4j;
 
 /** Resolver responsible for resolving 'searchAcrossEntities' field of the Query type */
 @Slf4j
-@RequiredArgsConstructor
 public class SearchAcrossEntitiesResolver implements DataFetcher<CompletableFuture<SearchResults>> {
 
   private static final int DEFAULT_START = 0;
@@ -45,6 +49,27 @@ public class SearchAcrossEntitiesResolver implements DataFetcher<CompletableFutu
 
   private final EntityClient _entityClient;
   private final ViewService _viewService;
+
+  /** Optional semantic search service. Non-null only when KNN search is enabled. */
+  @Nullable private final SemanticEntitySearch _semanticEntitySearch;
+
+  /** When true, KNN results are fetched in parallel and appended after text results. */
+  private final boolean _knnSearchEnabled;
+
+  public SearchAcrossEntitiesResolver(EntityClient entityClient, ViewService viewService) {
+    this(entityClient, viewService, null, false);
+  }
+
+  public SearchAcrossEntitiesResolver(
+      EntityClient entityClient,
+      ViewService viewService,
+      @Nullable SemanticEntitySearch semanticEntitySearch,
+      boolean knnSearchEnabled) {
+    this._entityClient = entityClient;
+    this._viewService = viewService;
+    this._semanticEntitySearch = semanticEntitySearch;
+    this._knnSearchEnabled = knnSearchEnabled;
+  }
 
   @Override
   public CompletableFuture<SearchResults> get(DataFetchingEnvironment environment) {
@@ -114,7 +139,7 @@ public class SearchAcrossEntitiesResolver implements DataFetcher<CompletableFutu
             List<String> structuredPropertyFacets =
                 shouldIncludeStructuredPropertyFacets ? getStructuredPropertyFacets(context) : null;
 
-            // Execute search and remove default filter fields from aggregations
+            // Execute text search
             SearchResult searchResult =
                 _entityClient.searchAcrossEntities(
                     context.getOperationContext().withSearchFlags(flags -> searchFlags),
@@ -129,6 +154,20 @@ public class SearchAcrossEntitiesResolver implements DataFetcher<CompletableFutu
             // Cleanse aggregations to remove hidden/default filter fields
             searchResult =
                 DefaultEntityFiltersUtil.removeDefaultFilterFieldsFromAggregations(searchResult);
+
+            // When KNN search is enabled, fetch semantic results in parallel and append
+            // entities that text search did not already return.
+            if (_knnSearchEnabled && _semanticEntitySearch != null) {
+              searchResult =
+                  mergeWithKnnResults(
+                      context,
+                      searchResult,
+                      finalEntities,
+                      sanitizedQuery,
+                      combinedFilter,
+                      start,
+                      count);
+            }
 
             return UrnSearchResultsMapper.map(context, searchResult);
           } catch (Exception e) {
@@ -169,6 +208,66 @@ public class SearchAcrossEntitiesResolver implements DataFetcher<CompletableFutu
     } catch (Exception e) {
       log.error("Failed to get structured property facets to filter on", e);
       return Collections.emptyList();
+    }
+  }
+
+  /**
+   * Executes KNN semantic search and merges the results with the existing text search result.
+   *
+   * <p>Strategy: text-search entities come first (order preserved). KNN entities whose URN did not
+   * appear in the text result are appended at the end. The total count reflects the union size, and
+   * the original aggregation metadata is preserved so facets remain usable.
+   *
+   * <p>KNN errors are swallowed so a semantic search failure never breaks the main text result.
+   */
+  private SearchResult mergeWithKnnResults(
+      QueryContext context,
+      SearchResult textResult,
+      List<String> entityNames,
+      String query,
+      Filter filter,
+      int start,
+      int count) {
+    try {
+      SearchResult knnResult =
+          _semanticEntitySearch.search(
+              context.getOperationContext(), entityNames, query, filter, null, 0, count);
+
+      if (knnResult == null || knnResult.getEntities().isEmpty()) {
+        return textResult;
+      }
+
+      // Build URN-keyed map of text results to detect duplicates in O(1)
+      Map<String, SearchEntity> textEntitiesByUrn = new LinkedHashMap<>();
+      for (SearchEntity entity : textResult.getEntities()) {
+        textEntitiesByUrn.put(entity.getEntity().toString(), entity);
+      }
+
+      // Collect KNN-only entities (not already in text results)
+      List<SearchEntity> knnOnlyEntities = new java.util.ArrayList<>();
+      for (SearchEntity knnEntity : knnResult.getEntities()) {
+        if (!textEntitiesByUrn.containsKey(knnEntity.getEntity().toString())) {
+          knnOnlyEntities.add(knnEntity);
+        }
+      }
+
+      if (knnOnlyEntities.isEmpty()) {
+        return textResult;
+      }
+
+      // Merge: text-result entities first, then KNN-only additions
+      SearchEntityArray merged = new SearchEntityArray(textResult.getEntities());
+      merged.addAll(knnOnlyEntities);
+
+      log.debug(
+          "KNN search added {} new entities to text search results (total: {})",
+          knnOnlyEntities.size(),
+          merged.size());
+
+      return textResult.clone().setEntities(merged).setNumEntities(merged.size());
+    } catch (Exception e) {
+      log.warn("KNN search failed, falling back to text-only results: {}", e.getMessage());
+      return textResult;
     }
   }
 

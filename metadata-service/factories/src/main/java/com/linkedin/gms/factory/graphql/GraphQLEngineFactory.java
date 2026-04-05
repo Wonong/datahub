@@ -34,6 +34,7 @@ import com.linkedin.metadata.graph.SiblingGraphService;
 import com.linkedin.metadata.models.registry.EntityRegistry;
 import com.linkedin.metadata.recommendation.RecommendationsService;
 import com.linkedin.metadata.search.SemanticSearchService;
+import com.linkedin.metadata.search.semantic.SemanticEntitySearch;
 import com.linkedin.metadata.service.ApplicationService;
 import com.linkedin.metadata.service.AssertionService;
 import com.linkedin.metadata.service.BusinessAttributeService;
@@ -240,6 +241,10 @@ public class GraphQLEngineFactory {
   @Qualifier("semanticSearchService")
   private SemanticSearchService semanticSearchService;
 
+  @Autowired(required = false)
+  @Qualifier("semanticEntitySearchService")
+  private SemanticEntitySearch semanticEntitySearchService;
+
   @Bean(name = "graphQLEngine")
   @Nonnull
   protected GraphQLEngine graphQLEngine(
@@ -312,6 +317,7 @@ public class GraphQLEngineFactory {
     args.setSemanticSearchService(semanticSearchService);
     args.setSemanticSearchConfiguration(
         configProvider.getElasticSearch().getEntityIndex().getSemanticSearch());
+    args.setSemanticEntitySearch(semanticEntitySearchService);
 
     return new GmsGraphQLEngine(args).builder().build();
   }
