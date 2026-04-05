@@ -63,7 +63,7 @@ public class DatasetEmbeddingHook implements MetadataChangeLogHook {
   static final String MODEL_KEY = "kure_v1";
 
   /** Model version string stored in {@link EmbeddingModelData#setModelVersion}. */
-  static final String MODEL_VERSION = "huggingface/dragonkue/kure-v1";
+  static final String MODEL_VERSION = "huggingface/nlpai-lab/KURE-v1";
 
   /**
    * Chunking strategy label. Since we always embed the whole document as a single chunk,
