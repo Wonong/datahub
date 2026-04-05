@@ -7,12 +7,13 @@ import lombok.NoArgsConstructor;
 /**
  * Configuration for embedding providers used to generate query embeddings for semantic search.
  *
- * <p>Supports three providers:
+ * <p>Supports four providers:
  *
  * <ul>
  *   <li><b>aws-bedrock</b>: AWS Bedrock Runtime API with Cohere/Titan models
  *   <li><b>openai</b>: OpenAI Embeddings API with text-embedding-3-small/large/ada-002 models
  *   <li><b>cohere</b>: Cohere Embed API with embed-english-v3.0/multilingual-v3.0 models
+ *   <li><b>huggingface</b>: HuggingFace Inference API (supports nlpai-lab/KURE-v1 and others)
  * </ul>
  */
 @Data
@@ -21,8 +22,8 @@ import lombok.NoArgsConstructor;
 public class EmbeddingProviderConfiguration {
 
   /**
-   * Type of embedding provider. Supported values: "openai", "aws-bedrock", "cohere". Defaults to
-   * "openai".
+   * Type of embedding provider. Supported values: "openai", "aws-bedrock", "cohere", "huggingface".
+   * Defaults to "openai".
    */
   private String type = "openai";
 
@@ -41,6 +42,9 @@ public class EmbeddingProviderConfiguration {
   /** Configuration for Cohere embedding provider. */
   private CohereConfig cohere = new CohereConfig();
 
+  /** Configuration for HuggingFace embedding provider. */
+  private HuggingFaceConfig huggingface = new HuggingFaceConfig();
+
   /**
    * Returns the model ID for the configured provider type, pulling from the appropriate sub-config.
    */
@@ -55,6 +59,8 @@ public class EmbeddingProviderConfiguration {
         return cohere != null ? cohere.getModel() : null;
       case "aws-bedrock":
         return bedrock != null ? bedrock.getModel() : null;
+      case "huggingface":
+        return huggingface != null ? huggingface.getModel() : null;
       default:
         return null;
     }
@@ -141,5 +147,31 @@ public class EmbeddingProviderConfiguration {
      * specify the full embed endpoint URL.
      */
     private String endpoint = "https://api.cohere.ai/v1/embed";
+  }
+
+  /** HuggingFace-specific configuration. */
+  @Data
+  @NoArgsConstructor
+  @AllArgsConstructor
+  public static class HuggingFaceConfig {
+    /**
+     * HuggingFace access token (starts with "hf_"). Required when using the managed Inference API.
+     * Can be omitted for unauthenticated self-hosted servers (e.g., Text Embeddings Inference).
+     */
+    private String apiKey;
+
+    /**
+     * HuggingFace model identifier. Defaults to "nlpai-lab/KURE-v1" (768 dimensions, Korean
+     * semantic embedding model). Any model that supports the feature-extraction pipeline can be
+     * used.
+     */
+    private String model = "nlpai-lab/KURE-v1";
+
+    /**
+     * Base URL of the inference server. Defaults to "https://api-inference.huggingface.co". For
+     * self-hosted deployments (e.g., Text Embeddings Inference), set this to the server's base URL
+     * (e.g., "http://localhost:8080").
+     */
+    private String baseUrl = "https://api-inference.huggingface.co";
   }
 }

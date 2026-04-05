@@ -419,8 +419,16 @@ elasticsearch:
           spaceType: ${ELASTICSEARCH_SEMANTIC_SPACE_TYPE:cosinesimil}
           efConstruction: ${ELASTICSEARCH_SEMANTIC_EF_CONSTRUCTION:128}
           m: ${ELASTICSEARCH_SEMANTIC_M:16}
+        # kure-v1: Korean semantic embedding model (768 dimensions)
+        # Activated when EMBEDDING_PROVIDER_TYPE=huggingface
+        kure_v1:
+          vectorDimension: ${ELASTICSEARCH_KURE_VECTOR_DIMENSION:768}
+          knnEngine: ${ELASTICSEARCH_KURE_KNN_ENGINE:faiss}
+          spaceType: ${ELASTICSEARCH_KURE_SPACE_TYPE:cosinesimil}
+          efConstruction: ${ELASTICSEARCH_KURE_EF_CONSTRUCTION:128}
+          m: ${ELASTICSEARCH_KURE_M:16}
       # Embedding provider configuration for generating query embeddings
-      # Supports three providers: "aws-bedrock", "openai", "cohere"
+      # Supports four providers: "aws-bedrock", "openai", "cohere", "huggingface"
       embeddingProvider:
         # Provider type: "aws-bedrock", "openai", or "cohere"
         type: ${EMBEDDING_PROVIDER_TYPE:openai}
@@ -446,6 +454,13 @@ elasticsearch:
           apiKey: ${COHERE_API_KEY:}
           model: ${COHERE_EMBEDDING_MODEL:embed-english-v3.0}
           endpoint: ${COHERE_EMBEDDING_ENDPOINT:https://api.cohere.ai/v1/embed}
+
+        # HuggingFace configuration (used when type is "huggingface")
+        # Default model: nlpai-lab/KURE-v1 (768 dimensions, Korean semantic embedding)
+        huggingface:
+          apiKey: ${HF_TOKEN:}
+          model: ${HF_EMBEDDING_MODEL:nlpai-lab/KURE-v1}
+          baseUrl: ${HF_EMBEDDING_BASE_URL:https://api-inference.huggingface.co}
   # Multi-client shim configuration
   shim:
     # Enable the search client shim (false = use legacy RestHighLevelClient)

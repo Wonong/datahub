@@ -6,6 +6,7 @@ import com.linkedin.metadata.config.search.SemanticSearchConfiguration;
 import com.linkedin.metadata.search.embedding.AwsBedrockEmbeddingProvider;
 import com.linkedin.metadata.search.embedding.CohereEmbeddingProvider;
 import com.linkedin.metadata.search.embedding.EmbeddingProvider;
+import com.linkedin.metadata.search.embedding.HuggingFaceEmbeddingProvider;
 import com.linkedin.metadata.search.embedding.NoOpEmbeddingProvider;
 import com.linkedin.metadata.search.embedding.OpenAIEmbeddingProvider;
 import javax.annotation.Nonnull;
@@ -73,9 +74,10 @@ public class EmbeddingProviderFactory {
       case "aws-bedrock" -> createAwsBedrockProvider(config);
       case "openai" -> createOpenAIProvider(config);
       case "cohere" -> createCohereProvider(config);
+      case "huggingface" -> createHuggingFaceProvider(config);
       default -> throw new IllegalStateException(
           String.format(
-              "Unsupported embedding provider type: %s. Supported types: aws-bedrock, openai, cohere",
+              "Unsupported embedding provider type: %s. Supported types: aws-bedrock, openai, cohere, huggingface",
               providerType));
     };
   }
@@ -127,5 +129,26 @@ public class EmbeddingProviderFactory {
 
     return new CohereEmbeddingProvider(
         cohereConfig.getApiKey(), cohereConfig.getEndpoint(), cohereConfig.getModel());
+  }
+
+  private EmbeddingProvider createHuggingFaceProvider(EmbeddingProviderConfiguration config) {
+    EmbeddingProviderConfiguration.HuggingFaceConfig hfConfig = config.getHuggingface();
+
+    if (hfConfig.getApiKey() == null || hfConfig.getApiKey().isBlank()) {
+      log.warn(
+          "HuggingFace API key is not set. Proceeding without authentication — "
+              + "this works for self-hosted servers but will fail against the managed Inference API. "
+              + "Set HF_TOKEN or configure embeddingProvider.huggingface.apiKey in application.yaml");
+    }
+
+    log.info(
+        "Configuring HuggingFace embedding provider: baseUrl={}, model={}",
+        hfConfig.getBaseUrl(),
+        hfConfig.getModel());
+
+    return new HuggingFaceEmbeddingProvider(
+        hfConfig.getApiKey() != null ? hfConfig.getApiKey() : "",
+        hfConfig.getBaseUrl(),
+        hfConfig.getModel());
   }
 }
