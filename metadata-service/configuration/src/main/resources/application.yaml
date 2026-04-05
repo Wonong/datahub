@@ -428,19 +428,25 @@ elasticsearch:
           efConstruction: ${ELASTICSEARCH_KURE_EF_CONSTRUCTION:128}
           m: ${ELASTICSEARCH_KURE_M:16}
       # Embedding provider configuration for generating query embeddings
-      # Supports four providers: "aws-bedrock", "openai", "cohere", "huggingface"
+      # Supports five providers: "local-http", "aws-bedrock", "openai", "cohere", "huggingface"
       embeddingProvider:
-        # Provider type: "aws-bedrock", "openai", or "cohere"
-        type: ${EMBEDDING_PROVIDER_TYPE:openai}
+        # Provider type. Defaults to "local-http" (companion datahub-embedding-service container).
+        type: ${EMBEDDING_PROVIDER_TYPE:local-http}
 
-        # Maximum text length before truncation (Cohere enforces 2048 character limit)
+        # Maximum text length before truncation
         maxCharacterLength: ${EMBEDDING_PROVIDER_MAX_CHAR_LENGTH:2048}
+
+        # local-http configuration (used when type is "local-http")
+        # Points to the datahub-embedding-service container which loads the model at startup.
+        # No API key required — the model is baked into the Docker image at build time.
+        # To use a remote/dedicated embedding service, override EMBEDDING_SERVICE_URL.
+        localHttp:
+          baseUrl: ${EMBEDDING_SERVICE_URL:http://datahub-embedding-service:8766}
+          timeoutSeconds: ${EMBEDDING_SERVICE_TIMEOUT_SECONDS:120}
 
         # AWS Bedrock configuration (used when type is "aws-bedrock")
         bedrock:
-          # AWS region where Bedrock is available (e.g., us-west-2, us-east-1)
           awsRegion: ${BEDROCK_EMBEDDING_AWS_REGION:us-west-2}
-          # Bedrock model ID for embeddings (Cohere Embed v3: 1024 dimensions)
           model: ${BEDROCK_EMBEDDING_MODEL:cohere.embed-english-v3}
 
         # OpenAI configuration (used when type is "openai")
@@ -455,8 +461,7 @@ elasticsearch:
           model: ${COHERE_EMBEDDING_MODEL:embed-english-v3.0}
           endpoint: ${COHERE_EMBEDDING_ENDPOINT:https://api.cohere.ai/v1/embed}
 
-        # HuggingFace configuration (used when type is "huggingface")
-        # Default model: nlpai-lab/KURE-v1 (768 dimensions, Korean semantic embedding)
+        # HuggingFace managed Inference API (used when type is "huggingface", requires API key)
         huggingface:
           apiKey: ${HF_TOKEN:}
           model: ${HF_EMBEDDING_MODEL:nlpai-lab/KURE-v1}

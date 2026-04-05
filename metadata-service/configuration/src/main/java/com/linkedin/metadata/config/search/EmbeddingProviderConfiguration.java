@@ -7,13 +7,15 @@ import lombok.NoArgsConstructor;
 /**
  * Configuration for embedding providers used to generate query embeddings for semantic search.
  *
- * <p>Supports four providers:
+ * <p>Supports five providers:
  *
  * <ul>
+ *   <li><b>local-http</b>: Local embedding service (model loaded in a companion container). No API
+ *       key required. Model is baked into the Docker image at build time.
  *   <li><b>aws-bedrock</b>: AWS Bedrock Runtime API with Cohere/Titan models
  *   <li><b>openai</b>: OpenAI Embeddings API with text-embedding-3-small/large/ada-002 models
  *   <li><b>cohere</b>: Cohere Embed API with embed-english-v3.0/multilingual-v3.0 models
- *   <li><b>huggingface</b>: HuggingFace Inference API (supports nlpai-lab/KURE-v1 and others)
+ *   <li><b>huggingface</b>: HuggingFace managed Inference API (requires API key)
  * </ul>
  */
 @Data
@@ -22,10 +24,10 @@ import lombok.NoArgsConstructor;
 public class EmbeddingProviderConfiguration {
 
   /**
-   * Type of embedding provider. Supported values: "openai", "aws-bedrock", "cohere", "huggingface".
-   * Defaults to "openai".
+   * Type of embedding provider. Supported values: "local-http", "openai", "aws-bedrock", "cohere",
+   * "huggingface". Defaults to "local-http".
    */
-  private String type = "openai";
+  private String type = "local-http";
 
   /**
    * Maximum text length in characters before truncation. Cohere Embed v3 enforces a 2048-character
@@ -42,8 +44,11 @@ public class EmbeddingProviderConfiguration {
   /** Configuration for Cohere embedding provider. */
   private CohereConfig cohere = new CohereConfig();
 
-  /** Configuration for HuggingFace embedding provider. */
+  /** Configuration for HuggingFace managed Inference API (requires API key). */
   private HuggingFaceConfig huggingface = new HuggingFaceConfig();
+
+  /** Configuration for local HTTP embedding service. */
+  private HttpConfig localHttp = new HttpConfig();
 
   /**
    * Returns the model ID for the configured provider type, pulling from the appropriate sub-config.
@@ -61,6 +66,8 @@ public class EmbeddingProviderConfiguration {
         return bedrock != null ? bedrock.getModel() : null;
       case "huggingface":
         return huggingface != null ? huggingface.getModel() : null;
+      case "local-http":
+        return "local";
       default:
         return null;
     }
@@ -149,29 +156,44 @@ public class EmbeddingProviderConfiguration {
     private String endpoint = "https://api.cohere.ai/v1/embed";
   }
 
-  /** HuggingFace-specific configuration. */
+  /** HuggingFace managed Inference API configuration (requires API key). */
   @Data
   @NoArgsConstructor
   @AllArgsConstructor
   public static class HuggingFaceConfig {
-    /**
-     * HuggingFace access token (starts with "hf_"). Required when using the managed Inference API.
-     * Can be omitted for unauthenticated self-hosted servers (e.g., Text Embeddings Inference).
-     */
+    /** HuggingFace access token (starts with "hf_"). Required for the managed Inference API. */
     private String apiKey;
 
-    /**
-     * HuggingFace model identifier. Defaults to "nlpai-lab/KURE-v1" (768 dimensions, Korean
-     * semantic embedding model). Any model that supports the feature-extraction pipeline can be
-     * used.
-     */
+    /** HuggingFace model identifier. */
     private String model = "nlpai-lab/KURE-v1";
 
-    /**
-     * Base URL of the inference server. Defaults to "https://api-inference.huggingface.co". For
-     * self-hosted deployments (e.g., Text Embeddings Inference), set this to the server's base URL
-     * (e.g., "http://localhost:8080").
-     */
+    /** Base URL of the inference server. */
     private String baseUrl = "https://api-inference.huggingface.co";
+  }
+
+  /**
+   * Configuration for the local HTTP embedding service ({@code type: local-http}).
+   *
+   * <p>The service runs as a companion container, downloads the model at Docker build time, and
+   * loads it into memory on startup. No API key is needed.
+   *
+   * <p>Set {@code EMBEDDING_SERVICE_URL} to point to a remote deployment when the embedding service
+   * is extracted into its own deployment.
+   */
+  @Data
+  @NoArgsConstructor
+  @AllArgsConstructor
+  public static class HttpConfig {
+    /**
+     * Base URL of the embedding service. Default assumes a companion container in the same
+     * docker-compose stack reachable via service name.
+     */
+    private String baseUrl = "http://datahub-embedding-service:8766";
+
+    /**
+     * HTTP request timeout in seconds. Set high enough to survive the model cold-start (typically
+     * 30–60 s on first request).
+     */
+    private int timeoutSeconds = 120;
   }
 }
